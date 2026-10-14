@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tages-Check</title>
+<meta name="description" content="Tägliche Checkliste für Supplements, Obst, Gemüse, Jodsalz und Kalorien-Ziel.">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#F2F5F6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1619" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tages-Check">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Schibsted+Grotesk:wght@400;500;600&display=swap">
+<style>
+/* Layout: eine schmale Spalte fürs Handy, Fortschritt oben, Punkte nach Tageszeit gruppiert, Wochenstreifen unten */
+:root {
+  --bg: #F2F5F6;
+  --surface: #FFFFFF;
+  --fg: #162027;
+  --muted: #586972;
+  --line: #D8E0E4;
+  --accent: #0E6B70;
+  --accent-fg: #FFFFFF;
+  --done: #E2F0F0;
+  --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: light;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F1619;
+    --surface: #172126;
+    --fg: #E6EEF1;
+    --muted: #8FA1AA;
+    --line: #27353B;
+    --accent: #4FB8BD;
+    --accent-fg: #06191B;
+    --done: #162E2F;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F1619;
+  --surface: #172126;
+  --fg: #E6EEF1;
+  --muted: #8FA1AA;
+  --line: #27353B;
+  --accent: #4FB8BD;
+  --accent-fg: #06191B;
+  --done: #162E2F;
+  color-scheme: dark;
+}
+
+[hidden] { display: none !important; }
+html, body { min-height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.4;
+  padding-inline: 16px;
+  padding-block: 20px 40px;
+}
+.wrap { max-width: 520px; margin-inline: auto; display: flex; flex-direction: column; gap: 24px; }
+
+header { display: flex; flex-direction: column; gap: 14px; }
+.date { color: var(--muted); font-size: 14px; letter-spacing: 0.01em; }
+.top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: 28px; line-height: 1.1; margin: 0; text-wrap: balance; }
+.count { font-family: var(--font-display); font-weight: 600; font-size: 28px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.count span { color: var(--muted); }
+.bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.25s ease; }
+.status { margin: 0; font-size: 14px; color: var(--muted); min-height: 1.4em; }
+
+section { display: flex; flex-direction: column; gap: 8px; }
+h2 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+.list { display: flex; flex-direction: column; gap: 8px; }
+
+.item {
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  width: 100%;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.item:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.box {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: 2px solid var(--muted);
+  display: grid;
+  place-items: center;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.box svg { width: 16px; height: 16px; stroke: var(--accent-fg); fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
+.text { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.name { font-weight: 600; }
+.hint { font-size: 13.5px; color: var(--muted); }
+.item[aria-checked="true"] { background: var(--done); border-color: var(--accent); }
+.item[aria-checked="true"] .box { background: var(--accent); border-color: var(--accent); }
+.item[aria-checked="true"] .box svg { opacity: 1; }
+.item[aria-checked="true"] .name { text-decoration: line-through; text-decoration-thickness: 1.5px; text-decoration-color: var(--muted); }
+
+.week { display: flex; flex-direction: column; gap: 10px; }
+.days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; align-items: end; }
+.day { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
+.col { width: 100%; max-width: 40px; height: 56px; border-radius: 6px; background: var(--line); display: flex; align-items: flex-end; overflow: hidden; }
+.col i { display: block; width: 100%; background: var(--accent); opacity: 0.55; }
+.day.today .col i { opacity: 1; }
+.day.full .col i { opacity: 1; }
+.lbl { font-size: 12px; color: var(--muted); }
+.day.today .lbl { color: var(--fg); font-weight: 600; }
+.note { margin: 0; font-size: 13px; color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .bar > i, .item, .box { transition: none; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="date" id="date"></div>
+    <div class="top">
+      <h1>Tages-Check</h1>
+      <div class="count" id="count" aria-live="polite"></div>
+    </div>
+    <div class="bar" aria-hidden="true"><i id="fill"></i></div>
+    <p class="status" id="status"></p>
+  </header>
+
+  <section>
+    <h2>Morgens</h2>
+    <div class="list" id="g-morgens"></div>
+  </section>
+  <section>
+    <h2>Tagsüber</h2>
+    <div class="list" id="g-tags"></div>
+  </section>
+  <section>
+    <h2>Abends</h2>
+    <div class="list" id="g-abends"></div>
+  </section>
+
+  <section class="week">
+    <h2>Letzte 7 Tage</h2>
+    <div class="days" id="days"></div>
+    <p class="note">Die Haken werden nur auf diesem Gerät gespeichert und setzen sich jeden Morgen zurück.</p>
+  </section>
+</div>
+
+<script>
+(function () {
+  // Neue Punkte hier ergänzen: id (eindeutig), group (morgens | tags | abends), name, hint.
+  var ITEMS = [
+    { id: "multi",  group: "morgens", name: "Multi-Vitamin",    hint: "1 Tablette zum Frühstück" },
+    { id: "omega",  group: "morgens", name: "Omega-3",          hint: "1 Kapsel zu einer Mahlzeit" },
+    { id: "obst",   group: "tags",    name: "Obst",             hint: "1 Apfel oder Orange" },
+    { id: "gemuese",group: "tags",    name: "Frisches Gemüse",  hint: "Paprika, Karotte, Zucchini, Champignons und Brokkoli" },
+    { id: "jod",    group: "tags",    name: "Jodsalz",          hint: "½ bis 1 TL über den Tag verteilt" },
+    { id: "d3",     group: "abends",  name: "Vitamin D3",       hint: "1.000 bis 2.000 IE zur Mahlzeit mit Fett" },
+    { id: "kcal",   group: "abends",  name: "Kalorien-Ziel",    hint: "Über etwa 3.000 kcal, Öl mitgezählt" }
+  ];
+  var STORE = "tages-check-v1";
+  var WD = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+  function keyOf(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORE);
+      var data = raw ? JSON.parse(raw) : {};
+      return data && typeof data === "object" ? data : {};
+    } catch (e) { return {}; }
+  }
+  var memory = null;
+  function read() { return memory || (memory = load()); }
+  function save(data) {
+    memory = data;
+    try { localStorage.setItem(STORE, JSON.stringify(data)); } catch (e) {}
+  }
+
+  var currentKey = keyOf(new Date());
+
+  function toggle(id) {
+    var data = read();
+    var list = data[currentKey] || [];
+    var i = list.indexOf(id);
+    if (i >= 0) list.splice(i, 1); else list.push(id);
+    data[currentKey] = list;
+    // nur die letzten 30 Tage behalten
+    var cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
+    var cutKey = keyOf(cutoff);
+    Object.keys(data).forEach(function (k) { if (k < cutKey) delete data[k]; });
+    save(data);
+    render();
+  }
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  function renderItem(item, checked) {
+    var b = el("button", "item");
+    b.type = "button";
+    b.id = "item-" + item.id;
+    b.setAttribute("role", "checkbox");
+    b.setAttribute("aria-checked", checked ? "true" : "false");
+    var box = el("span", "box");
+    box.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8"/></svg>';
+    var t = el("span", "text");
+    t.appendChild(el("span", "name", item.name));
+    t.appendChild(el("span", "hint", item.hint));
+    b.appendChild(box);
+    b.appendChild(t);
+    b.addEventListener("click", function () { toggle(item.id); });
+    return b;
+  }
+
+  function render() {
+    var now = new Date();
+    currentKey = keyOf(now);
+    var data = read();
+    var done = data[currentKey] || [];
+
+    document.getElementById("date").textContent =
+      now.toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" });
+
+    ["morgens", "tags", "abends"].forEach(function (g) {
+      var box = document.getElementById("g-" + g);
+      var focusId = document.activeElement && document.activeElement.id;
+      box.textContent = "";
+      ITEMS.filter(function (it) { return it.group === g; }).forEach(function (it) {
+        box.appendChild(renderItem(it, done.indexOf(it.id) >= 0));
+      });
+      if (focusId) { var f = document.getElementById(focusId); if (f && box.contains(f)) f.focus(); }
+    });
+
+    var total = ITEMS.length;
+    var n = ITEMS.filter(function (it) { return done.indexOf(it.id) >= 0; }).length;
+    var c = document.getElementById("count");
+    c.textContent = "";
+    c.appendChild(document.createTextNode(String(n)));
+    c.appendChild(el("span", null, " / " + total));
+    document.getElementById("fill").style.width = (n / total * 100) + "%";
+    document.getElementById("status").textContent =
+      n === total ? "Alles erledigt für heute." :
+      n === 0 ? "Noch nichts abgehakt." :
+      "Noch offen: " + ITEMS.filter(function (it) { return done.indexOf(it.id) < 0; })
+        .map(function (it) { return it.name; }).join(", ");
+
+    var days = document.getElementById("days");
+    days.textContent = "";
+    for (var i = 6; i >= 0; i--) {
+      var d = new Date(); d.setDate(d.getDate() - i);
+      var k = keyOf(d);
+      var cnt = (data[k] || []).length;
+      var cell = el("div", "day" + (i === 0 ? " today" : "") + (cnt === total ? " full" : ""));
+      cell.setAttribute("role", "img");
+      cell.setAttribute("aria-label", WD[d.getDay()] + ": " + cnt + " von " + total);
+      var col = el("div", "col");
+      var fill = el("i");
+      fill.style.height = (cnt / total * 100) + "%";
+      col.appendChild(fill);
+      cell.appendChild(col);
+      cell.appendChild(el("div", "lbl", WD[d.getDay()]));
+      days.appendChild(cell);
+    }
+  }
+
+  function checkNewDay() {
+    if (keyOf(new Date()) !== currentKey) render();
+  }
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) checkNewDay(); });
+  window.addEventListener("focus", checkNewDay);
+  setInterval(checkNewDay, 60000);
+
+  render();
+
+  // Offline-Modus: Service Worker registrieren (nur über https oder localhost)
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("sw.js").catch(function () {});
+    });
+  }
+})();
+</script>
+</body>
+</html>
